@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum CardType {
+  DEFENDER // 수비수
+  ATTACKER // 공격수
+}
+
+enum GradeType {
+  NOMAL // 노말
+  RARE  // 레어
+  EPIC  // 에픽
+  LEGENDARY // 레전더리
+}
+
+enum TeamColorType {
+  KOREA
+  US
+  JAPAN
+  CHINA
+  UK
+  SPAIN
+  FRANCE
+  ITALY
+  ARGENTINA
+  PORTUGAL
+}
+
+model User {
+  idx        Int       @id @default(autoincrement())
+  id         String    @unique @db.VarChar(255)
+  username   String    @db.VarChar(255)
+  password   String    @db.VarChar(255)
+  cash       Int       @default(5000) // 초기 자금 5000
+  wins       Int       @default(0)
+  losses     Int       @default(0)
+  created_at DateTime  @default(now())
+
+  userCards        UserCard[]
+  decks            Deck[]
+  gamesA           Game[]     @relation("TeamA")
+  gamesB           Game[]     @relation("TeamB")
+  cashTransactions CashTransaction[]
+}
+
+model Card {
+  idx        Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  speed      Int
+  finishing  Int
+  shot_power Int
+  defense    Int
+  stamina    Int
+  team_color TeamColorType
+  grade      GradeType
+  type       CardType
+
+  userCards UserCard[]
+}
+
+model Deck {
+  idx        Int        @id @default(autoincrement())
+  user_id    String
+  card_1_idx Int        @unique
+  card_2_idx Int        @unique
+  card_3_idx Int        @unique
+  created_at DateTime   @default(now())
+
+  user   User     @relation(fields: [user_id], references: [id])
+  card1  UserCard @relation("DeckCard1", fields: [card_1_idx], references: [idx])
+  card2  UserCard @relation("DeckCard2", fields: [card_2_idx], references: [idx])
+  card3  UserCard @relation("DeckCard3", fields: [card_3_idx], references: [idx])
+}
+
+model UserCard {
+  idx        Int       @id @default(autoincrement())
+  user_id    String
+  card_idx   Int
+  acquired_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+  card Card @relation(fields: [card_idx], references: [idx])
+
+  decks1 Deck? @relation("DeckCard1")
+  decks2 Deck? @relation("DeckCard2")
+  decks3 Deck? @relation("DeckCard3")
+}
+
+model Game {
+  idx             Int       @id @default(autoincrement())
+  team_a_user_id  String
+  team_b_user_id  String
+  team_a_score    Int
+  team_b_score    Int
+  played_at       DateTime  @default(now())
+
+  teamA User @relation("TeamA", fields: [team_a_user_id], references: [id])
+  teamB User @relation("TeamB", fields: [team_b_user_id], references: [id])
+}
+
+model CashTransaction {
+  idx               Int       @id @default(autoincrement())
+  user_id           String
+  amount            Int
+  transaction_date  DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+}
