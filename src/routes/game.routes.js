@@ -38,116 +38,130 @@ router.post('/game:user_id', async (req, res, next) => {
           in: users,
         },
       },
-      select : {
-        card_1_idx : true,
-        card_2_idx : true,
-        card_3_idx : true,
-      }
+      select: {
+        card_1_idx: true,
+        card_2_idx: true,
+        card_3_idx: true,
+      },
     });
 
-    if(decks.length !== 2) return res.status(401).json({message : "덱이 없는 사용자가 있습니다."});
+    if (decks.length !== 2)
+      return res.status(401).json({ message: '덱이 없는 사용자가 있습니다.' });
 
     const aTeamCards = await prisma.card.findMany({
       where: {
-        idx : {
-          in : decks[0]
-        }
+        idx: {
+          in: decks[0],
+        },
       },
-      select : {
-        idx : true,
-        name : true,
+      select: {
+        idx: true,
+        name: true,
 
-        tackle : true,
-        Physical : true,
+        tackle: true,
+        Physical: true,
 
-        power : true,
-        dribble : true,
+        power: true,
+        dribble: true,
 
-        team_color : true,
-        grade : true,
-        type : true,
-      }
+        team_color: true,
+        grade: true,
+        type: true,
+      },
     });
 
-    if(aTeamCards.length !== 3) return res.status(401).json({message : "도전자의 덱에 선수 수가 맞지 않습니다."});
+    if (aTeamCards.length !== 3)
+      return res
+        .status(401)
+        .json({ message: '도전자의 덱에 선수 수가 맞지 않습니다.' });
 
     const bTeamCards = await prisma.card.findMany({
       where: {
-        idx : {
-          in : decks[1]
-        }
+        idx: {
+          in: decks[1],
+        },
       },
-      select : {
-        idx : true,
-        name : true,
+      select: {
+        idx: true,
+        name: true,
 
-        tackle : true,
-        Physical : true,
+        tackle: true,
+        Physical: true,
 
-        power : true,
-        dribble : true,
-        
-        team_color : true,
-        grade : true,
-        type : true,
-      }
+        power: true,
+        dribble: true,
+
+        team_color: true,
+        grade: true,
+        type: true,
+      },
     });
 
-    if(bTeamCards.length !== 3) return res.status(401).json({message : "상대방의 덱에 선수 수가 맞지 않습니다."});
+    if (bTeamCards.length !== 3)
+      return res
+        .status(401)
+        .json({ message: '상대방의 덱에 선수 수가 맞지 않습니다.' });
 
     // #endregion
 
-    /** 경기 시작  */ 
+    /** 확률 계산  */
 
     // 스쿼드 스탯 별 공&방 기본 점수 계산
     let rates = getRate(aTeamCards, bTeamCards);
 
     // 공격 수비 포지션별 확률 조정
     let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
+    let team_colors = [{}, {}];
 
-    for(let i=0; i<HEADCOUNT; i++) {
-      if(aTeamCards[i].type === 'ATTACKER') positions[0] += 1;
-      else positions[2] +=1;
-      
-      if(bTeamCards[i].type === 'ATTACKER') positions[1] +=1;
-      else positions[3] +=1;
+    for (let i = 0; i < HEADCOUNT; i++) {
+      //포지션 검사
+      if (aTeamCards[i].type === 'ATTACKER') positions[0] += 1;
+      else positions[2] += 1;
+
+      if (bTeamCards[i].type === 'ATTACKER') positions[1] += 1;
+      else positions[3] += 1;
+
+      //진영 검사
+      const aTeamColor = aTeamCards[i].team_color;
+      if (team_colors[0][aTeamColor]) team_colors[0][aTeamColor] += 1;
+      else team_colors[0][aTeamColor] = 1;
+
+      const bTeamColor = bTeamCards[i].team_color;
+      if (team_colors[1][bTeamColor]) team_colors[1][bTeamColor] += 1;
+      else team_colors[1][bTeamColor] = 1;
     }
 
-    rates.aTeamAttackRatio += 10*positions[0] - 10*positions[2];
-    rates.bTeamAttackRatio += 10*positions[1] - 10*positions[3];
+    rates.aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
+    rates.bTeamAttackRatio += 10 * positions[1] - 10 * positions[3];
 
-    rates.aTeamDeffenseRatio += 10*positions[2] - 10*positions[0];
-    rates.bTeamDeffenseRatio += 10*positions[3] - 10*positions[1];
+    rates.aTeamDeffenseRatio += 10 * positions[2] - 10 * positions[0];
+    rates.bTeamDeffenseRatio += 10 * positions[3] - 10 * positions[1];
 
-
-    //
+    // 진영별 확률 조정
   } catch (err) {
     next(err);
   }
 });
 // #endregion
 
-
 // #region 스탯으로 공격 수비 확률 계산
-function getRate (aTeamCards, bTeamCards) {
-  
+function getRate(aTeamCards, bTeamCards) {
   let aSum = {
-    tackle : 0,
-    physical : 0,
-    power : 0,
-    dribble : 0
+    tackle: 0,
+    physical: 0,
+    power: 0,
+    dribble: 0,
   };
 
   let bSum = {
-    tackle : 0,
-    physical : 0,
-    power : 0,
-    dribble : 0
-  }
+    tackle: 0,
+    physical: 0,
+    power: 0,
+    dribble: 0,
+  };
 
   //전부 더하기
-  for(let i=0; i< HEADCOUNT; i++) {
-    
+  for (let i = 0; i < HEADCOUNT; i++) {
     aSum.tackle += aTeamCards[i].tackle;
     bSum.tackle += bTeamCards[i].tackle;
 
@@ -174,15 +188,18 @@ function getRate (aTeamCards, bTeamCards) {
   aSum.dribble *= ATTACK_WEIGHT[1];
   bSum.dribble *= ATTACK_WEIGHT[1];
 
-  const aTeamDeffenseRatio = Math.floor((aSum.tackle + aSum.physical) /2);
-  const bTeamDeffenseRatio = Math.floor((bSum.tackle + bSum.physical) /2);
+  const aTeamDeffenseRatio = Math.floor((aSum.tackle + aSum.physical) / 2);
+  const bTeamDeffenseRatio = Math.floor((bSum.tackle + bSum.physical) / 2);
 
-  const aTeamAttackRatio = Math.floor((aSum.power + aSum.physical) /2);
-  const bTeamAttackRatio = Math.floor((bSum.power + bSum.physical) /2);
+  const aTeamAttackRatio = Math.floor((aSum.power + aSum.physical) / 2);
+  const bTeamAttackRatio = Math.floor((bSum.power + bSum.physical) / 2);
 
-
-  return {aTeamAttackRatio, bTeamAttackRatio, aTeamDeffenseRatio, bTeamDeffenseRatio};
-
+  return {
+    aTeamAttackRatio,
+    bTeamAttackRatio,
+    aTeamDeffenseRatio,
+    bTeamDeffenseRatio,
+  };
 }
 // #endregion
 
