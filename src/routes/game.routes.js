@@ -8,7 +8,7 @@ const router = Router();
 //유효성 검사
 const numberSchema = Joi.number().required().strict();
 
-// 상수 값
+// #region 상수 값
 
 // 스탯 가중치
 const ATTACK_WEIGHT = [0.3, 0.2];
@@ -19,6 +19,8 @@ const HEADCOUNT = 3;
 
 // 진영 가중치
 const TEAM_COLOR_WEIGHT = [0, 13, 20];
+
+// #endregion
 
 // #region 게임 로직
 router.post('/game:user_id', async (req, res, next) => {
@@ -115,7 +117,12 @@ router.post('/game:user_id', async (req, res, next) => {
     /** 확률 계산  */
 
     // 스쿼드 스탯 별 공&방 기본 점수 계산
-    let {aTeamAttackRatio, bTeamAttackRatio, aTeamDeffenseRatio, bTeamDeffenseRatio} = getRate(aTeamCards, bTeamCards);
+    let {
+      aTeamAttackRatio,
+      bTeamAttackRatio,
+      aTeamDeffenseRatio,
+      bTeamDeffenseRatio,
+    } = getRate(aTeamCards, bTeamCards);
 
     // 공격 수비 포지션별 확률 조정
     let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
@@ -165,7 +172,6 @@ router.post('/game:user_id', async (req, res, next) => {
       }
     }
 
-
     /** 경기 시작 */
     let aScore = 0;
     let bScore = 0;
@@ -174,21 +180,34 @@ router.post('/game:user_id', async (req, res, next) => {
       // A팀 공격, B팀 방어
       if (Math.random() < aTeamAttackRatio) {
         if (Math.random() >= bTeamDeffenseRatio) {
-          aScore +=1; // A팀 득점
+          aScore += 1; // A팀 득점
         }
       }
 
       // B팀 공격, A팀 방어
       if (Math.random() < bTeamAttackRatio) {
         if (Math.random() >= aTeamDeffenseRatio) {
-          bScore +=1; // B팀 득점
+          bScore += 1; // B팀 득점
         }
       }
     }
 
-    
+    //경기 결과 기록
+    await prisma.game.create({
+      data: {
+        team_a_user_id: req.user.idx,
+        team_b_user_id: user_id,
+        team_a_score: aScore,
+        team_b_score: bScore,
+      },
+    });
 
+    // 결과 반환
+    const result = aScore > bScore ? 'WIN' : aScore < bScore ? 'LOSE' : 'DRAW';
 
+    return res
+      .status(201)
+      .json({ result: result, a_team_score: aScore, b_team_score: bScore });
   } catch (err) {
     next(err);
   }
