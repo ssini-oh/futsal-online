@@ -13,7 +13,7 @@ enum CardType {
 }
 
 enum GradeType {
-  NORMAL  // 노말
+  NORMAL // 노말
   RARE  // 레어
   EPIC  // 에픽
   LEGENDARY // 레전더리
@@ -52,11 +52,13 @@ model User {
 model Card {
   idx        Int       @id @default(autoincrement())
   name       String    @db.VarChar(255)
-  speed      Int
-  finishing  Int
-  shot_power Int
-  defense    Int
-  stamina    Int
+
+  tackle      Int // 태클
+  physical    Int // 피지컬
+
+  power       Int // 파워
+  dribble     Int // 드리블
+
   team_color TeamColorType
   grade      GradeType
   type       CardType
