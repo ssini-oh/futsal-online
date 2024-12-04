@@ -170,6 +170,16 @@ router.post('/game/:user_id', async (req, res, next) => {
     /** 경기 시작 */
     const { aScore, bScore } = game(rates);
 
+    //경기 결과 기록
+    await prisma.game.create({
+      data: {
+        team_a_user_id: dummyIds[0],
+        team_b_user_id: dummyIds[1],
+        team_a_score: aScore,
+        team_b_score: bScore,
+      },
+    });
+
     // 결과 반환
     const result = aScore > bScore ? 'WIN' : aScore < bScore ? 'LOSE' : 'DRAW';
 
