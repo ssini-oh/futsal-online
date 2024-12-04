@@ -6,7 +6,7 @@ import Joi from 'joi';
 const router = Router();
 
 //유효성 검사
-const numberSchema = Joi.number().required().strict();
+const stringSchema = Joi.string().required().strict();
 
 // #region 상수 값
 
@@ -23,32 +23,34 @@ const HEADCOUNT = 3;
 // 라운드 수
 const MAX_ROUND = 15;
 
+const dummyIds = ['test002', 'test003'];
+
 // #endregion
 
 // #region 게임 로직
-router.post('/game:user_id', async (req, res, next) => {
+router.post('/game/:user_id', async (req, res, next) => {
   //인증 미들웨어 넣기
   try {
-    const { user_id } = req.params;
+    // const { user_id } = req.params;
 
-    // 데이터 검사
-    if (!req.user)
-      return res.status(400).json({ message: '로그인 후 이용해주세요.' });
+    // // 데이터 검사
+    // if (!req.user)
+    //   return res.status(400).json({ message: '로그인 후 이용해주세요.' });
 
-    const validation = await numberSchema.validateAsync(+user_id);
+    // const validation = await stringSchema.validateAsync(user_id);
 
-    if (req.user.idx === user_id)
-      return res
-        .status(400)
-        .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
+    // if (req.user.idx === user_id)
+    //   return res
+    //     .status(400)
+    //     .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
 
     // #region 카드 받아오기
-    const users = [req.user.idx, user_id];
+    //const users = [req.user.id, user_id]; //TODO 인증 미들웨어 변경 시 아이디 변경
 
-    const decks = await prisma.deck.findMany({
+    const cards = await prisma.deck.findMany({
       where: {
         user_id: {
-          in: users,
+          in: dummyIds,
         },
       },
       select: {
@@ -58,8 +60,22 @@ router.post('/game:user_id', async (req, res, next) => {
       },
     });
 
-    if (decks.length !== 2)
+    if (cards.length !== 2)
       return res.status(401).json({ message: '덱이 없는 사용자가 있습니다.' });
+
+    //배열로 바꾸기
+    let decks = [];
+
+    for(const idx in cards) {
+      const item = cards[idx];
+      let tmp =[];
+
+      for(const key in item) {
+        tmp.push(item[key]);
+      }
+
+      decks.push(tmp);
+    }
 
     const aTeamCards = await prisma.card.findMany({
       where: {
