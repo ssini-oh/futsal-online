@@ -104,4 +104,91 @@ router.get('/cards', async (req, res, next) => {
   }
 });
 
+// 가챠 API: /users/:user_id/cards
+router.post('/users/:user_id/cards', async (req, res, next) => {
+  try {
+    const { user_id } = req.params; // URL 파라미터에서 user_id를 가져옴
+    const gachaCost = 500; // 가챠 비용 설정
+
+    // 유저 확인
+    const user = await prisma.user.findUnique({
+      where: { id: user_id },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: '존재하지 않는 유저입니다.' });
+    }
+
+    // 유저 자금 확인
+    if (user.cash < gachaCost) {
+      return res.status(400).json({
+        message: '가챠를 하기 위한 골드가 부족합니다.',
+      });
+    }
+
+    // 각 grade별 카드의 확률을 설정
+    const cardProbabilities = {
+      NORMAL: 0.7, // 70% 확률
+      RARE: 0.25, // 25% 확률
+      EPIC: 0.04, // 4% 확률
+      LEGENDARY: 0.01, // 1% 확률
+    };
+
+    // 각 grade별 카드 목록 조회
+    const normalCards = await prisma.card.findMany({
+      where: { grade: 'NORMAL' },
+    });
+    const rareCards = await prisma.card.findMany({ where: { grade: 'RARE' } });
+    const epicCards = await prisma.card.findMany({ where: { grade: 'EPIC' } });
+    const legendaryCards = await prisma.card.findMany({
+      where: { grade: 'LEGENDARY' },
+    });
+
+    // 확률에 맞게 카드 선택
+    const rand = Math.random();
+
+    let selectedCard;
+
+    if (rand < cardProbabilities.NORMAL) {
+      selectedCard =
+        normalCards[Math.floor(Math.random() * normalCards.length)];
+    } else if (rand < cardProbabilities.NORMAL + cardProbabilities.RARE) {
+      selectedCard = rareCards[Math.floor(Math.random() * rareCards.length)];
+    } else if (
+      rand <
+      cardProbabilities.NORMAL + cardProbabilities.RARE + cardProbabilities.EPIC
+    ) {
+      selectedCard = epicCards[Math.floor(Math.random() * epicCards.length)];
+    } else {
+      selectedCard =
+        legendaryCards[Math.floor(Math.random() * legendaryCards.length)];
+    }
+
+    // UserCard 모델에 등록
+    const userCard = await prisma.userCard.create({
+      data: {
+        user_id: user_id, // 파라미터에서 받은 user_id를 사용
+        card_idx: selectedCard.idx,
+      },
+    });
+
+    // 가챠 비용 차감
+    await prisma.user.update({
+      where: { id: user_id },
+      data: {
+        cash: user.cash - gachaCost,
+      },
+    });
+
+    // 성공 응답
+    return res.status(201).json({
+      message: '가챠 성공!',
+      card: selectedCard,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
+});
+
 export default router;
