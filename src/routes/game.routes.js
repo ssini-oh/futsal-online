@@ -66,11 +66,11 @@ router.post('/game/:user_id', async (req, res, next) => {
     //배열로 바꾸기
     let decks = [];
 
-    for(const idx in cards) {
+    for (const idx in cards) {
       const item = cards[idx];
-      let tmp =[];
+      let tmp = [];
 
-      for(const key in item) {
+      for (const key in item) {
         tmp.push(item[key]);
       }
 
@@ -143,27 +143,37 @@ router.post('/game/:user_id', async (req, res, next) => {
 
     // 스탯 모음
     let statSums = [
-      { tackle: 0, physical: 0, power: 0, dribble: 0 },
-      { tackle: 0, physical: 0, power: 0, dribble: 0 },
+      { tackle: 0, Physical: 0, power: 0, dribble: 0 },
+      { tackle: 0, Physical: 0, power: 0, dribble: 0 },
     ];
 
     // 카드 정보 받아오기
     getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums);
 
+    console.log(aTeamCards, bTeamCards);
+
     // 스쿼드 스탯 별 공&방 기본 점수 계산
     let rates = getRate(statSums);
+
+    console.log(rates);
 
     // 포지션 별 확률 조정
     applyPositions(rates, positions);
 
+    console.log(rates);
+
     // 진영별 확률 조정
     applyTeamColors(rates, team_colors);
+
+    console.log(rates);
 
     /** 경기 시작 */
     const { aScore, bScore } = game(rates);
 
     // 결과 반환
     const result = aScore > bScore ? 'WIN' : aScore < bScore ? 'LOSE' : 'DRAW';
+
+    console.log(rates);
 
     return res
       .status(201)
@@ -181,8 +191,8 @@ function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
     statSums[0].tackle += aTeamCards[i].tackle;
     statSums[1].tackle += bTeamCards[i].tackle;
 
-    statSums[0].physical += aTeamCards[i].physical;
-    statSums[1].physical += bTeamCards[i].physical;
+    statSums[0].Physical += aTeamCards[i].Physical;
+    statSums[1].Physical += bTeamCards[i].Physical;
 
     statSums[0].power += aTeamCards[i].power;
     statSums[1].power += bTeamCards[i].power;
@@ -211,24 +221,37 @@ function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
 
 // #region 스탯으로 공격 수비 확률 계산
 function getRate(statSums) {
+
+  console.log(statSums);
+
   // 가중치 계산
-  statSums[0].tackle *= DEFENSE_WEIGHT[0];
-  statSums[1].tackle *= DEFENSE_WEIGHT[0];
+  statSums[0].tackle = Math.floor(statSums[0].tackle * DEFENSE_WEIGHT[0]);
+  statSums[1].tackle = Math.floor((statSums[1].tackle * DEFENSE_WEIGHT[0]));
 
-  statSums[0].physical *= DEFENSE_WEIGHT[1];
-  statSums[1].physical *= DEFENSE_WEIGHT[1];
+  statSums[0].Physical = Math.floor((statSums[0].Physical * DEFENSE_WEIGHT[1]));
+  statSums[1].Physical = Math.floor((statSums[1].Physical * DEFENSE_WEIGHT[1]));
 
-  statSums[0].power *= ATTACK_WEIGHT[0];
-  statSums[1].power *= ATTACK_WEIGHT[0];
+  statSums[0].power = Math.floor((statSums[0].power * ATTACK_WEIGHT[0]));
+  statSums[1].power = Math.floor((statSums[1].power * ATTACK_WEIGHT[0]));
 
-  statSums[0].dribble *= ATTACK_WEIGHT[1];
-  statSums[1].dribble *= ATTACK_WEIGHT[1];
+  statSums[0].dribble = Math.floor((statSums[0].dribble * ATTACK_WEIGHT[1]));
+  statSums[1].dribble = Math.floor((statSums[1].dribble * ATTACK_WEIGHT[1]));
 
-  const aTeamDeffenseRatio = Math.floor((aSum.tackle + aSum.physical) / 2);
-  const bTeamDeffenseRatio = Math.floor((bSum.tackle + bSum.physical) / 2);
+  const aTeamDeffenseRatio = Math.floor(
+    (statSums[0].tackle + statSums[0].Physical) / 2
+  );
+  const bTeamDeffenseRatio = Math.floor(
+    (statSums[1].tackle + statSums[1].Physical) / 2
+  );
 
-  const aTeamAttackRatio = Math.floor((aSum.power + aSum.physical) / 2);
-  const bTeamAttackRatio = Math.floor((bSum.power + bSum.physical) / 2);
+  const aTeamAttackRatio = Math.floor(
+    (statSums[0].power + statSums[0].Physical) / 2
+  );
+  const bTeamAttackRatio = Math.floor(
+    (statSums[1].power + statSums[1].Physical) / 2
+  );
+
+  console.log(statSums);
 
   return {
     aTeamAttackRatio,
