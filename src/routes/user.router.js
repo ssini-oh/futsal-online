@@ -1,11 +1,11 @@
 import express from "express";
-// import { prisma } from "../utils/prisma/index.js" // post 에서 만든거 사용함
+import { prisma } from "../utils/prisma/index.js" // post 에서 만든거 사용함
 
 const router = express.Router();
 
 router.get('/users', async (req, res) => {
     try {
-        const allUsers = await prismas.user.findMany({
+        const allUsers = await prisma.user.findMany({
             select: {
                 username: true,
                 wins: true,
