@@ -4,7 +4,7 @@ import errorHandlerMiddleware from './middlewares/error-handler.middleware.js';
 
 import authRoutes from './routes/auth.routes.js';
 import cashRoutes from './routes/cash.routes.js';
-import cardRoutes from './routes/cards.routers.js';
+import cardRoutes from './routes/cards.routes.js';
 
 const app = express();
 const PORT = 3000;
