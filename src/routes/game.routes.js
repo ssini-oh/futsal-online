@@ -15,7 +15,7 @@ const ATTACK_WEIGHT = [0.3, 0.2];
 const DEFENSE_WEIGHT = [0.2, 0.3];
 
 // 진영 가중치
-const TEAM_COLOR_WEIGHT = [0, 13, 20];
+const TEAM_COLOR_WEIGHT = [0, 0, 13, 20];
 
 // 팀 선수 명수
 const HEADCOUNT = 3;
@@ -173,8 +173,6 @@ router.post('/game/:user_id', async (req, res, next) => {
     // 결과 반환
     const result = aScore > bScore ? 'WIN' : aScore < bScore ? 'LOSE' : 'DRAW';
 
-    console.log(rates);
-
     return res
       .status(201)
       .json({ result: result, a_team_score: aScore, b_team_score: bScore });
@@ -221,21 +219,20 @@ function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
 
 // #region 스탯으로 공격 수비 확률 계산
 function getRate(statSums) {
-
   console.log(statSums);
 
   // 가중치 계산
   statSums[0].tackle = Math.floor(statSums[0].tackle * DEFENSE_WEIGHT[0]);
-  statSums[1].tackle = Math.floor((statSums[1].tackle * DEFENSE_WEIGHT[0]));
+  statSums[1].tackle = Math.floor(statSums[1].tackle * DEFENSE_WEIGHT[0]);
 
-  statSums[0].Physical = Math.floor((statSums[0].Physical * DEFENSE_WEIGHT[1]));
-  statSums[1].Physical = Math.floor((statSums[1].Physical * DEFENSE_WEIGHT[1]));
+  statSums[0].Physical = Math.floor(statSums[0].Physical * DEFENSE_WEIGHT[1]);
+  statSums[1].Physical = Math.floor(statSums[1].Physical * DEFENSE_WEIGHT[1]);
 
-  statSums[0].power = Math.floor((statSums[0].power * ATTACK_WEIGHT[0]));
-  statSums[1].power = Math.floor((statSums[1].power * ATTACK_WEIGHT[0]));
+  statSums[0].power = Math.floor(statSums[0].power * ATTACK_WEIGHT[0]);
+  statSums[1].power = Math.floor(statSums[1].power * ATTACK_WEIGHT[0]);
 
-  statSums[0].dribble = Math.floor((statSums[0].dribble * ATTACK_WEIGHT[1]));
-  statSums[1].dribble = Math.floor((statSums[1].dribble * ATTACK_WEIGHT[1]));
+  statSums[0].dribble = Math.floor(statSums[0].dribble * ATTACK_WEIGHT[1]);
+  statSums[1].dribble = Math.floor(statSums[1].dribble * ATTACK_WEIGHT[1]);
 
   const aTeamDeffenseRatio = Math.floor(
     (statSums[0].tackle + statSums[0].Physical) / 2
@@ -272,29 +269,25 @@ function applyPositions(rates, positions) {
 }
 // #endregion
 
-// #region 포지션 별 확률 조정
+// #region 진영 별 확률 조정
 function applyTeamColors(rates, team_colors) {
-  if (team_colors[0].length < 3) {
-    for (const key in team_colors[0]) {
-      const item = team_colors[0][key];
+  for (const key in team_colors[0]) {
+    const item = team_colors[0][key];
 
-      rates.aTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
-      rates.aTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
-    }
+    rates.aTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
+    rates.aTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
   }
 
-  if (team_colors[1].length < 3) {
-    for (const key in team_colors[1]) {
-      const item = team_colors[1][key];
+  for (const key in team_colors[1]) {
+    const item = team_colors[1][key];
 
-      rates.bTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
-      rates.bTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
-    }
+    rates.bTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
+    rates.bTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
   }
 }
 // #endregion
 
-// #region 스탯으로 공격 수비 확률 계산
+// #region 경기 진행
 function game(rates) {
   let aScore = 0;
   let bScore = 0;
