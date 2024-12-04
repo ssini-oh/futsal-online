@@ -116,35 +116,29 @@ router.post('/game:user_id', async (req, res, next) => {
 
     /** 확률 계산  */
 
+    //확률
+
+    //포지션
+    let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
+
+    //진영
+    let team_colors = [{}, {}];
+
+    let statSums = [
+      { tackle: 0, physical: 0, power: 0, dribble: 0 },
+      { tackle: 0, physical: 0, power: 0, dribble: 0 }
+    ];
+
+    // 카드 정보 받아오기
+    getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums);
+
     // 스쿼드 스탯 별 공&방 기본 점수 계산
     let {
       aTeamAttackRatio,
       bTeamAttackRatio,
       aTeamDeffenseRatio,
       bTeamDeffenseRatio,
-    } = getRate(aTeamCards, bTeamCards);
-
-    // 공격 수비 포지션별 확률 조정
-    let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
-    let team_colors = [{}, {}];
-
-    for (let i = 0; i < HEADCOUNT; i++) {
-      //포지션 검사
-      if (aTeamCards[i].type === 'ATTACKER') positions[0] += 1;
-      else positions[2] += 1;
-
-      if (bTeamCards[i].type === 'ATTACKER') positions[1] += 1;
-      else positions[3] += 1;
-
-      //진영 검사
-      const aTeamColor = aTeamCards[i].team_color;
-      if (team_colors[0][aTeamColor]) team_colors[0][aTeamColor] += 1;
-      else team_colors[0][aTeamColor] = 1;
-
-      const bTeamColor = bTeamCards[i].team_color;
-      if (team_colors[1][bTeamColor]) team_colors[1][bTeamColor] += 1;
-      else team_colors[1][bTeamColor] = 1;
-    }
+    } = getRate(statSums);    
 
     // 포지션 별 확률 조정
     aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
@@ -214,49 +208,58 @@ router.post('/game:user_id', async (req, res, next) => {
 });
 // #endregion
 
-// #region 스탯으로 공격 수비 확률 계산
-function getRate(aTeamCards, bTeamCards) {
-  let aSum = {
-    tackle: 0,
-    physical: 0,
-    power: 0,
-    dribble: 0,
-  };
+// #region 팀 정보 추출
+function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
 
-  let bSum = {
-    tackle: 0,
-    physical: 0,
-    power: 0,
-    dribble: 0,
-  };
-
-  //전부 더하기
   for (let i = 0; i < HEADCOUNT; i++) {
-    aSum.tackle += aTeamCards[i].tackle;
-    bSum.tackle += bTeamCards[i].tackle;
 
-    aSum.physical += aTeamCards[i].physical;
-    bSum.physical += bTeamCards[i].physical;
+    //스탯 검사
+    statSums[0].tackle += aTeamCards[i].tackle;
+    statSums[1].tackle += bTeamCards[i].tackle;
+    
+    statSums[0].physical += aTeamCards[i].physical;
+    statSums[1].physical += bTeamCards[i].physical;
 
-    aSum.power += aTeamCards[i].power;
-    bSum.power += bTeamCards[i].power;
+    statSums[0].power += aTeamCards[i].power;
+    statSums[1].power += bTeamCards[i].power;
 
-    aSum.dribble += aTeamCards[i].dribble;
-    bSum.dribble += bTeamCards[i].dribble;
+    statSums[0].dribble += aTeamCards[i].dribble;
+    statSums[1].dribble += bTeamCards[i].dribble;
+
+    //포지션 검사
+    if (aTeamCards[i].type === 'ATTACKER') positions[0] += 1;
+    else positions[2] += 1;
+
+    if (bTeamCards[i].type === 'ATTACKER') positions[1] += 1;
+    else positions[3] += 1;
+
+    //진영 검사
+    const aTeamColor = aTeamCards[i].team_color;
+    if (team_colors[0][aTeamColor]) team_colors[0][aTeamColor] += 1;
+    else team_colors[0][aTeamColor] = 1;
+
+    const bTeamColor = bTeamCards[i].team_color;
+    if (team_colors[1][bTeamColor]) team_colors[1][bTeamColor] += 1;
+    else team_colors[1][bTeamColor] = 1;
   }
+}
+// #endregion
+
+// #region 스탯으로 공격 수비 확률 계산
+function getRate(statSums) {
 
   // 가중치 계산
-  aSum.tackle *= DEFENSE_WEIGHT[0];
-  bSum.tackle *= DEFENSE_WEIGHT[0];
+  statSums[0].tackle *= DEFENSE_WEIGHT[0];
+  statSums[1].tackle *= DEFENSE_WEIGHT[0];
 
-  aSum.physical *= DEFENSE_WEIGHT[1];
-  bSum.physical *= DEFENSE_WEIGHT[1];
+  statSums[0].physical *= DEFENSE_WEIGHT[1];
+  statSums[1].physical *= DEFENSE_WEIGHT[1];
 
-  aSum.power *= ATTACK_WEIGHT[0];
-  bSum.power *= ATTACK_WEIGHT[0];
+  statSums[0].power *= ATTACK_WEIGHT[0];
+  statSums[1].power *= ATTACK_WEIGHT[0];
 
-  aSum.dribble *= ATTACK_WEIGHT[1];
-  bSum.dribble *= ATTACK_WEIGHT[1];
+  statSums[0].dribble *= ATTACK_WEIGHT[1];
+  statSums[1].dribble *= ATTACK_WEIGHT[1];
 
   const aTeamDeffenseRatio = Math.floor((aSum.tackle + aSum.physical) / 2);
   const bTeamDeffenseRatio = Math.floor((bSum.tackle + bSum.physical) / 2);
@@ -272,5 +275,7 @@ function getRate(aTeamCards, bTeamCards) {
   };
 }
 // #endregion
+
+
 
 export default router;
