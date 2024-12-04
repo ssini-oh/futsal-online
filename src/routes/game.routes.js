@@ -5,12 +5,20 @@ import Joi from 'joi';
 
 const router = Router();
 
+//유효성 검사
 const numberSchema = Joi.number().required().strict();
 
+// 상수 값
+
+// 스탯 가중치
 const ATTACK_WEIGHT = [0.3, 0.2];
 const DEFENSE_WEIGHT = [0.2, 0.3];
 
+// 팀 선수 명수
 const HEADCOUNT = 3;
+
+// 진영 가중치
+const TEAM_COLOR_WEIGHT = [0, 13, 20];
 
 // #region 게임 로직
 router.post('/game:user_id', async (req, res, next) => {
@@ -107,7 +115,7 @@ router.post('/game:user_id', async (req, res, next) => {
     /** 확률 계산  */
 
     // 스쿼드 스탯 별 공&방 기본 점수 계산
-    let rates = getRate(aTeamCards, bTeamCards);
+    let {aTeamAttackRatio, bTeamAttackRatio, aTeamDeffenseRatio, bTeamDeffenseRatio} = getRate(aTeamCards, bTeamCards);
 
     // 공격 수비 포지션별 확률 조정
     let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
@@ -131,13 +139,56 @@ router.post('/game:user_id', async (req, res, next) => {
       else team_colors[1][bTeamColor] = 1;
     }
 
-    rates.aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
-    rates.bTeamAttackRatio += 10 * positions[1] - 10 * positions[3];
+    // 포지션 별 확률 조정
+    aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
+    bTeamAttackRatio += 10 * positions[1] - 10 * positions[3];
 
-    rates.aTeamDeffenseRatio += 10 * positions[2] - 10 * positions[0];
-    rates.bTeamDeffenseRatio += 10 * positions[3] - 10 * positions[1];
+    aTeamDeffenseRatio += 10 * positions[2] - 10 * positions[0];
+    bTeamDeffenseRatio += 10 * positions[3] - 10 * positions[1];
 
     // 진영별 확률 조정
+    if (team_colors[0].length < 3) {
+      for (const key in team_colors[0]) {
+        const item = team_colors[0][key];
+
+        aTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
+        aTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
+      }
+    }
+
+    if (team_colors[1].length < 3) {
+      for (const key in team_colors[1]) {
+        const item = team_colors[1][key];
+
+        bTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
+        bTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
+      }
+    }
+
+
+    /** 경기 시작 */
+    let aScore = 0;
+    let bScore = 0;
+
+    for (let turn = 1; turn <= maxTurns; turn++) {
+      // A팀 공격, B팀 방어
+      if (Math.random() < aTeamAttackRatio) {
+        if (Math.random() >= bTeamDeffenseRatio) {
+          aScore +=1; // A팀 득점
+        }
+      }
+
+      // B팀 공격, A팀 방어
+      if (Math.random() < bTeamAttackRatio) {
+        if (Math.random() >= aTeamDeffenseRatio) {
+          bScore +=1; // B팀 득점
+        }
+      }
+    }
+
+    
+
+
   } catch (err) {
     next(err);
   }
