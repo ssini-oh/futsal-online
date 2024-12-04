@@ -39,7 +39,7 @@ router.post('/sign-up', async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
-        id: user.id,
+        id,
         password: hashedPassword,
         username,
       },
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 로그인 성공 시 토큰 생성 및 응답
-    const token = generateToken(userId);
+    const token = generateToken();
     res.header('authorization', `Bearer${token}`);
     return res.status(200).json({ message: '로그인 성공', token });
   } catch (error) {
@@ -73,5 +73,6 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
   }
 });
+// 유저 정보 조회
 
 export default router;

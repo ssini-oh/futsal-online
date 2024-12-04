@@ -4,21 +4,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const generateToken = (userId) => {
-  const token = jwt.sign{
-    UserId: User.userId,
-  }
-    
+  const token = jwt.sign(
+    {
+      userId: userId,
+    },
+    'custom-secret-key'
+  );
+  return token;
 };
-
-
-
-// a = user.id
-// function Test(a) {
-//   console.log(a);    
-// }
-
-
-// const user = {
-//   id = 100
-// }
-// Test(user.id)
