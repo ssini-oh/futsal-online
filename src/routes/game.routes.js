@@ -14,11 +14,14 @@ const numberSchema = Joi.number().required().strict();
 const ATTACK_WEIGHT = [0.3, 0.2];
 const DEFENSE_WEIGHT = [0.2, 0.3];
 
+// 진영 가중치
+const TEAM_COLOR_WEIGHT = [0, 13, 20];
+
 // 팀 선수 명수
 const HEADCOUNT = 3;
 
-// 진영 가중치
-const TEAM_COLOR_WEIGHT = [0, 13, 20];
+// 라운드 수
+const MAX_ROUND = 15;
 
 // #endregion
 
@@ -116,85 +119,32 @@ router.post('/game:user_id', async (req, res, next) => {
 
     /** 확률 계산  */
 
-    //확률
-
-    //포지션
+    // 포지션
     let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
 
-    //진영
+    // 진영
     let team_colors = [{}, {}];
 
+    // 스탯 모음
     let statSums = [
       { tackle: 0, physical: 0, power: 0, dribble: 0 },
-      { tackle: 0, physical: 0, power: 0, dribble: 0 }
+      { tackle: 0, physical: 0, power: 0, dribble: 0 },
     ];
 
     // 카드 정보 받아오기
     getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums);
 
     // 스쿼드 스탯 별 공&방 기본 점수 계산
-    let {
-      aTeamAttackRatio,
-      bTeamAttackRatio,
-      aTeamDeffenseRatio,
-      bTeamDeffenseRatio,
-    } = getRate(statSums);    
+    let rates = getRate(statSums);
 
     // 포지션 별 확률 조정
-    aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
-    bTeamAttackRatio += 10 * positions[1] - 10 * positions[3];
-
-    aTeamDeffenseRatio += 10 * positions[2] - 10 * positions[0];
-    bTeamDeffenseRatio += 10 * positions[3] - 10 * positions[1];
+    applyPositions(rates, positions);
 
     // 진영별 확률 조정
-    if (team_colors[0].length < 3) {
-      for (const key in team_colors[0]) {
-        const item = team_colors[0][key];
-
-        aTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
-        aTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
-      }
-    }
-
-    if (team_colors[1].length < 3) {
-      for (const key in team_colors[1]) {
-        const item = team_colors[1][key];
-
-        bTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
-        bTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
-      }
-    }
+    applyTeamColors(rates, team_colors);
 
     /** 경기 시작 */
-    let aScore = 0;
-    let bScore = 0;
-
-    for (let turn = 1; turn <= maxTurns; turn++) {
-      // A팀 공격, B팀 방어
-      if (Math.random() < aTeamAttackRatio) {
-        if (Math.random() >= bTeamDeffenseRatio) {
-          aScore += 1; // A팀 득점
-        }
-      }
-
-      // B팀 공격, A팀 방어
-      if (Math.random() < bTeamAttackRatio) {
-        if (Math.random() >= aTeamDeffenseRatio) {
-          bScore += 1; // B팀 득점
-        }
-      }
-    }
-
-    //경기 결과 기록
-    await prisma.game.create({
-      data: {
-        team_a_user_id: req.user.idx,
-        team_b_user_id: user_id,
-        team_a_score: aScore,
-        team_b_score: bScore,
-      },
-    });
+    const { aScore, bScore } = game(rates);
 
     // 결과 반환
     const result = aScore > bScore ? 'WIN' : aScore < bScore ? 'LOSE' : 'DRAW';
@@ -210,13 +160,11 @@ router.post('/game:user_id', async (req, res, next) => {
 
 // #region 팀 정보 추출
 function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
-
   for (let i = 0; i < HEADCOUNT; i++) {
-
     //스탯 검사
     statSums[0].tackle += aTeamCards[i].tackle;
     statSums[1].tackle += bTeamCards[i].tackle;
-    
+
     statSums[0].physical += aTeamCards[i].physical;
     statSums[1].physical += bTeamCards[i].physical;
 
@@ -247,7 +195,6 @@ function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
 
 // #region 스탯으로 공격 수비 확률 계산
 function getRate(statSums) {
-
   // 가중치 계산
   statSums[0].tackle *= DEFENSE_WEIGHT[0];
   statSums[1].tackle *= DEFENSE_WEIGHT[0];
@@ -276,6 +223,70 @@ function getRate(statSums) {
 }
 // #endregion
 
+// #region 포지션 별 확률 조정
+function applyPositions(rates, positions) {
+  rates.aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
+  rates.bTeamAttackRatio += 10 * positions[1] - 10 * positions[3];
 
+  rates.aTeamDeffenseRatio += 10 * positions[2] - 10 * positions[0];
+  rates.bTeamDeffenseRatio += 10 * positions[3] - 10 * positions[1];
+}
+// #endregion
+
+// #region 포지션 별 확률 조정
+function applyTeamColors(rates, team_colors) {
+  if (team_colors[0].length < 3) {
+    for (const key in team_colors[0]) {
+      const item = team_colors[0][key];
+
+      rates.aTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
+      rates.aTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
+    }
+  }
+
+  if (team_colors[1].length < 3) {
+    for (const key in team_colors[1]) {
+      const item = team_colors[1][key];
+
+      rates.bTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
+      rates.bTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
+    }
+  }
+}
+// #endregion
+
+// #region 스탯으로 공격 수비 확률 계산
+function game(rates) {
+  let aScore = 0;
+  let bScore = 0;
+
+  for (let round = 1; round <= MAX_ROUND; round++) {
+    // A팀 공격, B팀 방어
+    if (getRandomNum(1, 100) <= rates.aTeamAttackRatio) {
+      if (getRandomNum(1, 100) >= rates.bTeamDeffenseRatio) {
+        aScore += 1; // A팀 득점
+      }
+    }
+
+    // B팀 공격, A팀 방어
+    if (getRandomNum(1, 100) <= rates.bTeamAttackRatio) {
+      if (getRandomNum(1, 100) >= rates.aTeamDeffenseRatio) {
+        bScore += 1; // B팀 득점
+      }
+    }
+  }
+
+  return {
+    aScore,
+    bScore,
+  };
+}
+// #endregion
+
+// #region 랜덤 숫자 뽑기
+function getRandomNum(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+// #endregion
 
 export default router;
