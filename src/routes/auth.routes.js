@@ -9,7 +9,7 @@ const router = Router();
 //---- 회원가입 API
 router.post('/sign-up', async (req, res) => {
   try {
-    const { id, password, username } = req.body;
+    const { id, password, username, confirmPassword } = req.body;
     const isExistUser = await prisma.user.findFirst({
       where: {
         id,
@@ -20,6 +20,17 @@ router.post('/sign-up', async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const accountRegex = /^[a-z]+[a-z0-9]{5,19}$/g;
+    if (password.length < 6) {
+      return resizeBy
+        .status(400)
+        .json({ message: '비밀번호는 최소 6자 이상이어야 합니다.' });
+    }
+
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ message: '비밀번호와 비밀번호 확인이 일치하지않습니다' });
+    }
     if (!accountRegex.test(id)) {
       return res.status(400).json({
         message:
