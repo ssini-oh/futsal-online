@@ -54,8 +54,8 @@ model Card {
   name       String    @db.VarChar(255)
 
   tackle      Int // 태클
-  Physical    Int // 피지컬
-  
+  physical    Int // 피지컬
+
   power       Int // 파워
   dribble     Int // 드리블
 
