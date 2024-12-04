@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
-
 import { prisma } from '../utils/prisma/index.js';
 import { generateToken } from '../utils/token.js';
 
@@ -53,7 +52,7 @@ router.post('/sign-up', async (req, res) => {
 });
 
 //---- 로그인 API
-router.post('/sign-in', async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { id, password } = req.body;
     const user = await prisma.user.findFirst({ where: { id } });
@@ -66,7 +65,8 @@ router.post('/sign-in', async (req, res) => {
     }
 
     // 로그인 성공 시 토큰 생성 및 응답
-    const token = generateToken(user.id);
+    const token = generateToken(userId);
+    res.header('authorization', `Bearer${token}`);
     return res.status(200).json({ message: '로그인 성공', token });
   } catch (error) {
     console.error(error);
