@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
 import authMidWare from '../middlewares/auth.middleware.js';
-import {stringSchema} from '../validations/auth.validation.js';
+import { stringSchema } from '../validations/auth.validation.js';
 
 const router = Router();
 
@@ -173,7 +173,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     calibrateRates(rates);
 
     console.log(rates);
-    
+
 
     /** 경기 시작 */
     const { aScore, bScore } = game(rates);
@@ -198,6 +198,89 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     next(err);
   }
 });
+// #endregion
+
+// #region 대전 기록 조회
+router.get('./games/battle-log/:userId', authMidWare, async (req, res) => {
+  const userId = parseInt(req.params.Id, 10);
+
+  try {
+    const battleLog = await prisma.game.findUnique({
+      where: { team_a_user_id: userId },
+      select: {
+        team_b_user_id: true,
+        team_a_score: true,
+        team_b_score: true,
+        played_at: true
+      }
+    })
+    if (!battleLog) {
+      return res
+        .status(404)
+        .json({ message: "해당 닉네임은 대전기록이 없습니다." })
+    }
+    return res.status(200).json(battleLog);
+  } catch (error) {
+    console.error("배틀로그 조회중 에러발생:", error);
+    return res
+      .status(500)
+      .json({ message: "배틀로그 조회중 오류가 발생했습니다." });
+  }
+})
+
+
+// router.get('/users/:userId/cards',  async (req, res) => {
+//   const { userId } = req.params;
+
+//   try {
+//       await stringSchema.validateAsync(req.user.id);
+
+//       //아이디 일치 판정
+//       if (userId !== req.user.id) return res.status(401).json({ message: "다른 유저의 보유 카드입니다." });
+
+//       //카드 아이디 받아오기
+//       const cardIdxs = await prisma.userCard.findMany({
+//           where: {
+//               user_id: userId
+//           },
+//           select: {
+//               card_idx: true,
+//           },
+//       });
+
+//       if (!cardIdxs) return res.status(200).json({ message: "보유 카드가 없습니다." });
+
+//       //객체 -> 배열
+//       const Idxs = cardIdxs.map(item => item.card_idx);
+
+//       //카드 정보 받아오기
+//       const userCards = await prisma.card.findMany({
+//           where: {
+//               idx: {
+//                   in: Idxs
+//               }
+//           },
+//           select: {
+//               name: true,
+//               physical: true,
+//               power: true,
+//               dribble: true,
+//               team_color: true,
+//               grade: true,
+//               type: true
+//           },
+//       });
+
+//       return res.status(200).json(userCards);
+//   } catch (error) {
+//       console.error("보유 카드 검색 중 에러 발생: ", error);
+
+//       next(error);
+//   }
+// });
+
+
+
 // #endregion
 
 // #region 팀 정보 추출
@@ -335,8 +418,8 @@ function game(rates) {
 
 // #region 확률 보정
 function calibrateRates(rates) {
-  for(const key in rates) {
-    if(rates[key] > MAX_RATE) rates[key] = MAX_RATE;
+  for (const key in rates) {
+    if (rates[key] > MAX_RATE) rates[key] = MAX_RATE;
     else if (rates[key] < MIN_RATE) rates[key] = MIN_RATE;
   }
 }
@@ -348,5 +431,10 @@ function getRandomNum(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 // #endregion
+
+
+
+
+
 
 export default router;

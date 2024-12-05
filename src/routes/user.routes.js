@@ -29,7 +29,7 @@ router.get('/users', async (req, res) => {
 });
 
 router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
-    const { userId } = req.params;
+  const { userId } = req.params;
 
 
   try {
@@ -37,49 +37,52 @@ router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
 
 
 
-        //아이디 일치 판정
-        if (userId !== req.user.id) return res.status(401).json({ message: "다른 유저의 보유 카드입니다." });
+    //아이디 일치 판정
+    if (userId !== req.user.id)
+      return res.status(401).json({ message: '다른 유저의 보유 카드입니다.' });
 
-        //카드 아이디 받아오기
-        const cardIdxs = await prisma.userCard.findMany({
-            where: {
-                user_id: userId
-            },
-            select: {
-                card_idx: true,
-            },
-        });
+    //카드 아이디 받아오기
+    const cardIdxs = await prisma.userCard.findMany({
+      where: {
+        user_id: userId,
+      },
+      select: {
+        card_idx: true,
+      },
+    });
 
-        if (!cardIdxs) return res.status(200).json({ message: "보유 카드가 없습니다." });
+    if (!cardIdxs)
+      return res.status(200).json({ message: '보유 카드가 없습니다.' });
+
 
     //객체 -> 배열
     const Idxs = cardIdxs.map((item) => item.card_idx);
 
 
-        //카드 정보 받아오기
-        const userCards = await prisma.card.findMany({
-            where: {
-                idx: {
-                    in: Idxs
-                }
-            },
-            select: {
-                name: true,
-                physical: true,
-                power: true,
-                dribble: true,
-                team_color: true,
-                grade: true,
-                type: true
-            },
-        });
+    //카드 정보 받아오기
+    const userCards = await prisma.card.findMany({
+      where: {
+        idx: {
+          in: Idxs,
+        },
+      },
+      select: {
+        name: true,
+        physical: true,
+        power: true,
+        dribble: true,
+        team_color: true,
+        grade: true,
+        type: true,
+      },
+    });
 
-        return res.status(200).json(userCards);
-    } catch (error) {
-        console.error("보유 카드 검색 중 에러 발생: ", error);
+    return res.status(200).json(userCards);
+  } catch (error) {
+    console.error('보유 카드 검색 중 에러 발생: ', error);
 
-        next(error);
-    }
+    next(error);
+  }
 
 });
 
