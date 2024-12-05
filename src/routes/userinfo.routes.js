@@ -3,9 +3,11 @@ import { prisma } from '../utils/prisma/index.js';
 
 const router = express.Router();
 
-router.get('/user/:user_Id', async (req, res, next) => {
+router.get('/user/:userId', async (req, res, next) => {
   try {
     const { userId } = req.params;
+    console.log('1111111111');
+    console.log(req.params);
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
