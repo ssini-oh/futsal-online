@@ -153,7 +153,7 @@ router.post('/users/:user_id/cards', authMidWare, async (req, res, next) => {
       },
     });
 
-    // 유저 캐시 차감
+    // 유저 캐시 차감//
     await prisma.user.update({
       where: { id: userId },
       data: { cash: user.cash - gachaCost },
