@@ -1,13 +1,9 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
-import { generateToken } from '../utils/token.js';
 import authMidWare from '../middlewares/auth.middleware.js';
-import Joi from 'joi';
+import {stringSchema} from '../validations/auth.validation.js';
 
 const router = Router();
-
-//유효성 검사
-const stringSchema = Joi.string().required().strict();
 
 // #region 상수 값
 
@@ -18,13 +14,18 @@ const DEFENSE_WEIGHT = [0.2, 0.3];
 // 진영 가중치
 const TEAM_COLOR_WEIGHT = [0, 0, 13, 20];
 
+// 포지션 버프량
+const POSITION_WEIGHT = 5;
+
 // 팀 선수 명수
 const HEADCOUNT = 3;
 
 // 라운드 수
 const MAX_ROUND = 15;
 
-const dummyIds = ['test002', 'test003'];
+// 확률 최대 최소
+const MAX_RATE = 100;
+const MIN_RATE = 1;
 
 // #endregion
 
@@ -36,13 +37,13 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     // 데이터 검사
     if (!req.user)
-      return res.status(400).json({ message: '로그인 후 이용해주세요.' });
+      return res.status(401).json({ message: '로그인 후 이용해주세요.' });
 
     const validation = await stringSchema.validateAsync(user_id);
 
     if (req.user.id === user_id)
       return res
-        .status(400)
+        .status(401)
         .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
 
     // #region 카드 받아오기
@@ -62,7 +63,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     });
 
     if (cards.length !== 2)
-      return res.status(401).json({ message: '덱이 없는 사용자가 있습니다.' });
+      return res.status(400).json({ message: '덱이 없는 사용자가 있습니다.' });
 
     //배열로 바꾸기
     let decks = [];
@@ -102,7 +103,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     if (aTeamCards.length !== 3)
       return res
-        .status(401)
+        .status(400)
         .json({ message: '도전자의 덱에 선수 수가 맞지 않습니다.' });
 
     const bTeamCards = await prisma.card.findMany({
@@ -129,7 +130,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     if (bTeamCards.length !== 3)
       return res
-        .status(401)
+        .status(400)
         .json({ message: '상대방의 덱에 선수 수가 맞지 않습니다.' });
 
     // #endregion
@@ -167,6 +168,12 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     applyTeamColors(rates, team_colors);
 
     console.log(rates);
+
+    //확률 최대 최소 보정
+    calibrateRates(rates);
+
+    console.log(rates);
+    
 
     /** 경기 시작 */
     const { aScore, bScore } = game(rates);
@@ -272,11 +279,11 @@ function getRate(statSums) {
 
 // #region 포지션 별 확률 조정
 function applyPositions(rates, positions) {
-  rates.aTeamAttackRatio += 10 * positions[0] - 10 * positions[2];
-  rates.bTeamAttackRatio += 10 * positions[1] - 10 * positions[3];
+  rates.aTeamAttackRatio += POSITION_WEIGHT * (positions[0] - positions[2]);
+  rates.bTeamAttackRatio += POSITION_WEIGHT * (positions[1] - positions[3]);
 
-  rates.aTeamDeffenseRatio += 10 * positions[2] - 10 * positions[0];
-  rates.bTeamDeffenseRatio += 10 * positions[3] - 10 * positions[1];
+  rates.aTeamDeffenseRatio += POSITION_WEIGHT * (positions[2] - positions[0]);
+  rates.bTeamDeffenseRatio += POSITION_WEIGHT * (positions[3] - positions[1]);
 }
 // #endregion
 
@@ -324,6 +331,16 @@ function game(rates) {
     bScore,
   };
 }
+// #endregion
+
+// #region 확률 보정
+function calibrateRates(rates) {
+  for(const key in rates) {
+    if(rates[key] > MAX_RATE) rates[key] = MAX_RATE;
+    else if (rates[key] < MIN_RATE) rates[key] = MIN_RATE;
+  }
+}
+
 // #endregion
 
 // #region 랜덤 숫자 뽑기
