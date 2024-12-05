@@ -1,19 +1,19 @@
 import express from 'express';
 import { prisma } from '../utils/prisma/index.js';
 import authMidWare from '../middlewares/auth.middleware.js';
+import { stringSchema } from '../validations/auth.validation.js';
 
 const router = express.Router();
 
 router.post('/cards', async (req, res, next) => {
+  let { name, tackle, physical, power, dribble, team_color, grade, type } =
+    req.body;
+
+  // 소문자 입력을 대문자로 변환
+  type = type.toUpperCase();
+  team_color = team_color.toUpperCase(); // team_color가 대문자로 오지 않으면 대문자로 변환
+  grade = grade.toUpperCase(); // grade도 대문자로 변환
   try {
-    let { name, tackle, physical, power, dribble, team_color, grade, type } =
-      req.body;
-
-    // 소문자 입력을 대문자로 변환
-    type = type.toUpperCase();
-    team_color = team_color.toUpperCase(); // team_color가 대문자로 오지 않으면 대문자로 변환
-    grade = grade.toUpperCase(); // grade도 대문자로 변환
-
     // 유효한 타입인지 확인
     const validTypes = ['DEFENDER', 'ATTACKER'];
     const validTeamColors = [
@@ -102,10 +102,11 @@ router.get('/cards', async (req, res, next) => {
 });
 
 router.post('/users/:user_id/cards', authMidWare, async (req, res, next) => {
-  try {
-    const userId = req.params.user_id; // URL 경로에서 user_id 가져오기
-    const gachaCost = 500; // 가챠 비용
+  const userId = req.params.user_id; // URL 경로에서 user_id 가져오기
+  const gachaCost = 500; // 가챠 비용
 
+  try {
+    await stringSchema.validateAsync(req.user.id);
     // 사용자 정보 조회
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -176,12 +177,13 @@ router.post(
   '/users/:user_id/cards/batch',
   authMidWare,
   async (req, res, next) => {
-    try {
-      const userId = req.params.user_id; // URL 경로에서 user_id 가져오기
-      const gachaCost = 400; // 한 장당 가챠 비용
-      const count = 5; // 한번에 뽑는 카드 수
-      const totalCost = gachaCost * count; // 총 가챠 비용
+    const userId = req.params.user_id; // URL 경로에서 user_id 가져오기
+    const gachaCost = 400; // 한 장당 가챠 비용
+    const count = 5; // 한번에 뽑는 카드 수
+    const totalCost = gachaCost * count; // 총 가챠 비용
 
+    try {
+      await stringSchema.validateAsync(req.user.id);
       // 사용자 정보 조회
       const user = await prisma.user.findUnique({
         where: { id: userId },
