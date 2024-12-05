@@ -112,7 +112,7 @@ router.post('/users/:user_id/cards', authMidWare, async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: '유저를 찾을 수 없습니다.' });
+      return res.status(404).json({ message: '로그인 후 이용해주세요.' });
     }
 
     // 가챠 비용 확인
@@ -188,7 +188,7 @@ router.post(
       });
 
       if (!user) {
-        return res.status(404).json({ message: '유저를 찾을 수 없습니다.' });
+        return res.status(404).json({ message: '로그인 후 이용해주세요.' });
       }
 
       // 가챠 비용 확인
