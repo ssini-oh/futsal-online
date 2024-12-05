@@ -8,7 +8,10 @@ export const generateToken = (userId) => {
     {
       userId: userId,
     },
-    'custom-secret-key'
+    process.env.JWT_KEY,
+    {
+      expiresIn: '1h',
+    }
   );
   return token;
 };
