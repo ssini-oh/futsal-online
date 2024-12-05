@@ -54,8 +54,7 @@ router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
     if (!cardIdxs)
       return res.status(200).json({ message: '보유 카드가 없습니다.' });
 
-    //객체 -> 배열
-    const Idxs = cardIdxs.map((item) => item.card_idx);
+
     //객체 -> 배열
     const Idxs = cardIdxs.map((item) => item.card_idx);
 
