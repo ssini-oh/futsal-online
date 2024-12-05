@@ -104,4 +104,76 @@ router.get('/cards', async (req, res, next) => {
   }
 });
 
+router.post('/users/:user_id/cards', async (req, res, next) => {
+  try {
+    const userId = req.params.user_id; // URL 경로에서 user_id 가져오기
+    const GACHA_COST = 500; // 가챠 비용
+
+    // 사용자 정보 조회
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: '유저를 찾을 수 없습니다.' });
+    }
+
+    // 가챠 비용 확인
+    if (user.cash < GACHA_COST) {
+      return res
+        .status(400)
+        .json({ message: '가챠를 하기 위한 골드가 부족합니다.' });
+    }
+
+    // 랜덤 숫자 생성 (0~100 사이)
+    const random = Math.random() * 100; // 0.0 ~ 100.0
+    let selectedGrade;
+
+    // 등급 확률에 따른 결정
+    if (random < 70) {
+      selectedGrade = 'NORMAL'; // 70%
+    } else if (random < 95) {
+      selectedGrade = 'RARE'; // 25% (70 ~ 95)
+    } else if (random < 99.5) {
+      selectedGrade = 'EPIC'; // 4.5% (95 ~ 99.5)
+    } else {
+      selectedGrade = 'LEGENDARY'; // 0.5% (99.5 ~ 100)
+    }
+
+    // 해당 등급의 카드 중 랜덤 선택
+    const cardsByGrade = await prisma.card.findMany({
+      where: { grade: selectedGrade },
+    });
+
+    const randomCard =
+      cardsByGrade[Math.floor(Math.random() * cardsByGrade.length)];
+
+    // UserCard 테이블에 카드 추가
+    const userCard = await prisma.userCard.create({
+      data: {
+        user_id: userId,
+        card_idx: randomCard.idx,
+      },
+    });
+
+    // 유저 캐시 차감
+    await prisma.user.update({
+      where: { id: userId },
+      data: { cash: user.cash - GACHA_COST },
+    });
+
+    // 가챠 결과 반환
+    return res.status(200).json({
+      message: '선수카드를 뽑았습니다!',
+      data: {
+        grade: selectedGrade,
+        card: randomCard,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
+});
+
 export default router;
