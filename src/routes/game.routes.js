@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
 import authMidWare from '../middlewares/auth.middleware.js';
-import stringSchema from '../validations/auth.validation.js';
+import {stringSchema} from '../validations/auth.validation.js';
 
 const router = Router();
 
