@@ -19,8 +19,7 @@ router.post('/sign-up', async (req, res, next) => {
       return res.status(409).json({ message: '이미 존재하는 아이디입니다.' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    testSchema.validate({ passowrd });
+    testSchema.validate({ password, id });
     const user = await prisma.user.create({
       data: {
         id,

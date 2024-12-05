@@ -9,8 +9,12 @@ export const testSchema = Joi.object({
     'string.min': '비밀번호는 최소 6자 이상이어야 합니다.',
     'any.required': '비밀번호는 필수 항목입니다.',
   }),
-  confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
-    'any.only': '비밀번호와 비밀번호 확인이 일치하지 않습니다.',
-    'any.required': '비밀번호 확인은 필수 항목입니다.',
-  }),
+  id: Joi.string()
+    .pattern(/^[a-zA-Z][a-zA-Z0-9]{5,19}$/) // 영문자로 시작하고 6~20자
+    .required()
+    .messages({
+      'string.pattern.base':
+        '아이디는 영문자로 시작하는 6~20자 영문자 또는 숫자이어야 합니다',
+      'any.required': '아이디는 필수 항목입니다',
+    }),
 });
