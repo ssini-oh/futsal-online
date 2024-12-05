@@ -10,6 +10,14 @@ export const testSchema = Joi.object({
     'string.max': '비밀번호는 10글자를 넘길수없습니다',
     'any.required':'비밀번호를 다시입력해주세요',
   }),
+  id: Joi.string()
+    .pattern(/^[a-zA-Z][a-zA-Z0-9]{5,19}$/) // 영문자로 시작하고 6~20자
+    .required()
+    .messages({
+      'string.pattern.base':
+        '아이디는 영문자로 시작하는 6~20자 영문자 또는 숫자이어야 합니다',
+      'any.required': '아이디는 필수 항목입니다',
+    }),
 });
 
 export const stringSchema = Joi.string().required().strict().messages({
