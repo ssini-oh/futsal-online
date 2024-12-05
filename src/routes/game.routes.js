@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
 import { generateToken } from '../utils/token.js';
+import authMidWare from '../middlewares/auth.middleware.js';
 import Joi from 'joi';
 
 const router = Router();
@@ -28,29 +29,29 @@ const dummyIds = ['test002', 'test003'];
 // #endregion
 
 // #region 게임 로직
-router.post('/game/:user_id', async (req, res, next) => {
+router.post('/game/:user_id', authMidWare, async (req, res, next) => {
   //인증 미들웨어 넣기
   try {
-    // const { user_id } = req.params;
+    const { user_id } = req.params;
 
-    // // 데이터 검사
-    // if (!req.user)
-    //   return res.status(400).json({ message: '로그인 후 이용해주세요.' });
+    // 데이터 검사
+    if (!req.user)
+      return res.status(400).json({ message: '로그인 후 이용해주세요.' });
 
-    // const validation = await stringSchema.validateAsync(user_id);
+    const validation = await stringSchema.validateAsync(user_id);
 
-    // if (req.user.idx === user_id)
-    //   return res
-    //     .status(400)
-    //     .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
+    if (req.user.id === user_id)
+      return res
+        .status(400)
+        .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
 
     // #region 카드 받아오기
-    //const users = [req.user.id, user_id]; //TODO 인증 미들웨어 변경 시 아이디 변경
+    const users = [req.user.id, user_id];
 
     const cards = await prisma.deck.findMany({
       where: {
         user_id: {
-          in: dummyIds,
+          in: users,
         },
       },
       select: {
@@ -173,8 +174,8 @@ router.post('/game/:user_id', async (req, res, next) => {
     //경기 결과 기록
     await prisma.game.create({
       data: {
-        team_a_user_id: dummyIds[0],
-        team_b_user_id: dummyIds[1],
+        team_a_user_id: users[0],
+        team_b_user_id: users[1],
         team_a_score: aScore,
         team_b_score: bScore,
       },
