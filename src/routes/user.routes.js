@@ -1,6 +1,7 @@
 import express from "express";
 import { prisma } from "../utils/prisma/index.js" // post 에서 만든거 사용함
 import authMiddleware from "../middlewares/auth.middleware.js";
+import {stringSchema} from "../validations/auth.validation.js";
 
 const router = express.Router();
 
@@ -29,6 +30,8 @@ router.get('/users/:userId/cards',authMiddleware, async (req, res) => {
     const {userId} = req.params;
 
     try {
+        await stringSchema.validateAsync(req.user.id);
+
         //아이디 일치 판정
         if(userId !== req.user.id) return res.status(401).json({message : "다른 유저의 보유 카드입니다."});
 
