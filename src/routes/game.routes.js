@@ -3,7 +3,7 @@ import { prisma } from '../utils/prisma/index.js';
 import authMidWare from '../middlewares/auth.middleware.js';
 import { stringSchema } from '../validations/auth.validation.js';
 
-const router = Router()
+const router = Router();
 
 // #region 상수 값
 
