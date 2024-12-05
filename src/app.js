@@ -2,13 +2,16 @@ import express from 'express';
 
 import errorHandlerMiddleware from './middlewares/error-handler.middleware.js';
 import Joi from 'joi';
+import dotenv from 'dotenv';
+
 import authRoutes from './routes/auth.routes.js';
 import cashRoutes from './routes/cash.routes.js';
 import cardRoutes from './routes/cards.routes.js';
 import gameRoutes from './routes/game.routes.js';
+import deckRoutes from './routes/deck.routes.js';
 import userinfoRoutes from './routes/userinfo.routes.js';
 import userRoutes from './routes/user.routes.js';
-import dotenv from 'dotenv';
+
 dotenv.config();
 
 const app = express();
@@ -25,6 +28,7 @@ app.use('/api', [
   gameRoutes,
   userRoutes,
   userinfoRoutes,
+  deckRoutes
 ]);
 
 // 에러 처리 미들웨어
