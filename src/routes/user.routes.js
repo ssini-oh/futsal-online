@@ -1,5 +1,5 @@
 import express from "express";
-import { prisma } from "../utils/prisma/index.js" // post 에서 만든거 사용함
+import { prisma } from "../utils/prisma/index.js"
 
 const router = express.Router();
 
@@ -23,3 +23,11 @@ router.get('/users', async (req, res) => {
         }
     }
 });
+
+export default router;
+// router.get('./users/battle-log/:userId', async (req, res, next) => {
+//     const userId = parseInt(req.params.id, 10);
+//     try {
+//         const battleLog = await prisma.game.
+//     }
+// })
