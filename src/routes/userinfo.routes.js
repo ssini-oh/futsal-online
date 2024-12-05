@@ -6,11 +6,7 @@ const router = express.Router();
 router.get('/user/:user_Id', async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const user = await prisma.user.findUnique({
-      where: {
-        userId: +userId,
-      },
-    });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
       return res
@@ -32,3 +28,4 @@ router.get('/user/:user_Id', async (req, res, next) => {
     //서버 오류 발생 시
   }
 });
+export default router;
