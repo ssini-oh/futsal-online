@@ -48,8 +48,8 @@ router.post('/login', async (req, res, next) => {
     }
 
     // 로그인 성공 시 토큰 생성 및 응답
-    const token = generateToken();
-    res.header('authorization', `Bearer${token}`);
+    const token = generateToken(id);
+    res.header('authorization', `Bearer ${token}`);
     return res.status(200).json({ message: '로그인 성공', token });
   } catch (error) {
     next(error);
