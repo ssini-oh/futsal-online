@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/user/:user_Id', async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const user = await prisma.items.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
         userId: +userId,
       },
@@ -28,8 +28,7 @@ router.get('/user/:user_Id', async (req, res, next) => {
 
     return res.status(200).json({ data: userinfo });
   } catch (error) {
+    next(error);
     //서버 오류 발생 시
-    console.error(error);
-    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
   }
 });
