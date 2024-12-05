@@ -1,12 +1,9 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
 import authMidWare from '../middlewares/auth.middleware.js';
-import Joi from 'joi';
+import stringSchema from '../validations/auth.validation.js';
 
 const router = Router();
-
-//유효성 검사
-const stringSchema = Joi.string().required().strict();
 
 // #region 상수 값
 
@@ -40,13 +37,13 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     // 데이터 검사
     if (!req.user)
-      return res.status(400).json({ message: '로그인 후 이용해주세요.' });
+      return res.status(401).json({ message: '로그인 후 이용해주세요.' });
 
     const validation = await stringSchema.validateAsync(user_id);
 
     if (req.user.id === user_id)
       return res
-        .status(400)
+        .status(401)
         .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
 
     // #region 카드 받아오기
@@ -66,7 +63,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     });
 
     if (cards.length !== 2)
-      return res.status(401).json({ message: '덱이 없는 사용자가 있습니다.' });
+      return res.status(400).json({ message: '덱이 없는 사용자가 있습니다.' });
 
     //배열로 바꾸기
     let decks = [];
@@ -106,7 +103,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     if (aTeamCards.length !== 3)
       return res
-        .status(401)
+        .status(400)
         .json({ message: '도전자의 덱에 선수 수가 맞지 않습니다.' });
 
     const bTeamCards = await prisma.card.findMany({
@@ -133,7 +130,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     if (bTeamCards.length !== 3)
       return res
-        .status(401)
+        .status(400)
         .json({ message: '상대방의 덱에 선수 수가 맞지 않습니다.' });
 
     // #endregion
