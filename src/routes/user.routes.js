@@ -1,7 +1,7 @@
 import express from "express";
 import { prisma } from "../utils/prisma/index.js" // post 에서 만든거 사용함
 import authMiddleware from "../middlewares/auth.middleware.js";
-import {stringSchema} from "../validations/auth.validation.js";
+import { stringSchema } from "../validations/auth.validation.js";
 
 const router = express.Router();
 
@@ -26,52 +26,52 @@ router.get('/users', async (req, res) => {
     }
 });
 
-router.get('/users/:userId/cards',authMiddleware, async (req, res) => {
-    const {userId} = req.params;
+router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
+    const { userId } = req.params;
 
     try {
         await stringSchema.validateAsync(req.user.id);
 
         //아이디 일치 판정
-        if(userId !== req.user.id) return res.status(401).json({message : "다른 유저의 보유 카드입니다."});
+        if (userId !== req.user.id) return res.status(401).json({ message: "다른 유저의 보유 카드입니다." });
 
         //카드 아이디 받아오기
         const cardIdxs = await prisma.userCard.findMany({
-            where : {
-                user_id : userId
+            where: {
+                user_id: userId
             },
             select: {
-                card_idx : true,
+                card_idx: true,
             },
         });
 
-        if(!cardIdxs) return res.status(200).json({message : "보유 카드가 없습니다."});
+        if (!cardIdxs) return res.status(200).json({ message: "보유 카드가 없습니다." });
 
         //객체 -> 배열
         const Idxs = cardIdxs.map(item => item.card_idx);
 
         //카드 정보 받아오기
         const userCards = await prisma.card.findMany({
-            where : {
-                idx : {
-                    in : Idxs
+            where: {
+                idx: {
+                    in: Idxs
                 }
             },
             select: {
                 name: true,
-                Physical: true,
-                power : true,
-                dribble : true,
-                team_color : true,
-                grade : true,
-                type : true
+                physical: true,
+                power: true,
+                dribble: true,
+                team_color: true,
+                grade: true,
+                type: true
             },
         });
 
         return res.status(200).json(userCards);
     } catch (error) {
         console.error("보유 카드 검색 중 에러 발생: ", error);
-        
+
         next(error);
     }
 });
