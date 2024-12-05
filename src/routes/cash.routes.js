@@ -1,13 +1,13 @@
 import express from 'express';
 import { prisma } from '../utils/prisma/index.js';
+import authMiddleware from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
 //---- 캐시 충전 API (JWT 인증 미들웨어 추가 필요)
-router.post('/cash', async (req, res, next) => {
+router.post('/cash', authMiddleware, async (req, res, next) => {
   const { cash } = req.body;
-  // const { userId } = req.user.id;
-  const { userId } = req.body; // 테스트 진행용
+  const userId = req.user.id;
 
   try {
     // 금액 유효성 체크
