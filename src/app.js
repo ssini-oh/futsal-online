@@ -6,6 +6,8 @@ import authRoutes from './routes/auth.routes.js';
 import cashRoutes from './routes/cash.routes.js';
 import cardRoutes from './routes/cards.routes.js';
 import gameRoutes from './routes/game.routes.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 const PORT = 3000;

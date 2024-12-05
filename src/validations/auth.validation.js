@@ -5,10 +5,12 @@ import Joi from 'joi';
 
 //---- 회원가입(아이디 생성) 스키마
 export const testSchema = Joi.object({
-  passowrd: Joi.string().min(6).max(10).required().message({
-    'string.min': '비밀번호는 최소 6글자 이상이어야합니다.',
-    'string.max': '비밀번호는 10글자를 넘길수없습니다',
-    'any.required':'비밀번호를 다시입력해주세요',
+  password: Joi.string().min(6).required().messages({
+    'string.min': '비밀번호는 최소 6자 이상이어야 합니다.',
+    'any.required': '비밀번호는 필수 항목입니다.',
+  }),
+  confirmPassword: Joi.string().valid(Joi.ref('password')).required().messages({
+    'any.only': '비밀번호와 비밀번호 확인이 일치하지 않습니다.',
+    'any.required': '비밀번호 확인은 필수 항목입니다.',
   }),
 });
-testSchema.validate({passowrd:123456})
