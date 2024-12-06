@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
-import authMidWare from '../middlewares/auth.middleware.js';
+import authMiddleware from '../middlewares/auth.middleware.js';
 import { stringSchema } from '../validations/auth.validation.js';
 
 const router = Router();
@@ -8,8 +8,8 @@ const router = Router();
 // #region 상수 값
 
 // 스탯 가중치
-const ATTACK_WEIGHT = [0.3, 0.2];
-const DEFENSE_WEIGHT = [0.2, 0.3];
+const ATTACK_WEIGHT = [0.3, 0.2]; // power, dribble
+const DEFENSE_WEIGHT = [0.2, 0.3]; // tackle, physical
 
 // 진영 가중치
 const TEAM_COLOR_WEIGHT = [0, 0, 13, 20];
@@ -24,30 +24,27 @@ const HEADCOUNT = 3;
 const MAX_ROUND = 15;
 
 // 확률 최대 최소
-const MAX_RATE = 100;
+const MAX_RATE = 99;
 const MIN_RATE = 1;
 
 // #endregion
 
 // #region 게임 로직
-router.post('/game/:user_id', authMidWare, async (req, res, next) => {
-  //인증 미들웨어 넣기
+router.post('/game/:userId', authMiddleware, async (req, res, next) => {
   try {
-    const { user_id } = req.params;
+    const { userId } = req.params;
 
     // 데이터 검사
     if (!req.user)
       return res.status(401).json({ message: '로그인 후 이용해주세요.' });
 
-    const validation = await stringSchema.validateAsync(user_id);
+    const validation = await stringSchema.validateAsync(userId);
 
-    if (req.user.id === user_id)
-      return res
-        .status(401)
-        .json({ message: '자기 자신 이외의 유저를 선택하세요.' });
+    if (req.user.id === userId)
+      return res.status(401).json({ message: '본인 외의 유저를 선택하세요.' });
 
     // #region 카드 받아오기
-    const users = [req.user.id, user_id];
+    const users = [req.user.id, userId]; // 내 아이디, 상대방 아이디
 
     const cards = await prisma.deck.findMany({
       where: {
@@ -56,6 +53,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
         },
       },
       select: {
+        user_id: true,
         card_1_idx: true,
         card_2_idx: true,
         card_3_idx: true,
@@ -65,18 +63,28 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     if (cards.length !== 2)
       return res.status(400).json({ message: '덱이 없는 사용자가 있습니다.' });
 
-    //배열로 바꾸기
+    // 배열로 바꾸기
     let decks = [];
 
-    for (const idx in cards) {
-      const item = cards[idx];
-      let tmp = [];
+    // users를 순회하며 각 유저의 카드를 검색
+    for (const user of users) {
+      // cards 배열에서 해당 유저의 데이터를 검색
+      const userCards = cards.find((card) => card.user_id === user);
 
-      for (const key in item) {
-        tmp.push(item[key]);
+      if (userCards) {
+        // 카드 인덱스를 배열로 변환
+        const cardIndexes = [
+          userCards.card_1_idx,
+          userCards.card_2_idx,
+          userCards.card_3_idx,
+        ].filter((card) => card !== null); // null 값 제거
+
+        // decks 배열에 추가
+        decks.push(cardIndexes);
+      } else {
+        // 유저에 해당하는 카드가 없으면 빈 배열 추가
+        decks.push([]);
       }
-
-      decks.push(tmp);
     }
 
     const aTeamCards = await prisma.card.findMany({
@@ -90,7 +98,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
         name: true,
 
         tackle: true,
-        Physical: true,
+        physical: true,
 
         power: true,
         dribble: true,
@@ -117,7 +125,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
         name: true,
 
         tackle: true,
-        Physical: true,
+        physical: true,
 
         power: true,
         dribble: true,
@@ -137,20 +145,20 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     /** 확률 계산  */
 
-    // 포지션
+    // 포지션 (각 팀의 공격수, 수비수 수)
     let positions = [0, 0, 0, 0]; // a공, b공, a수, b수
 
     // 진영
-    let team_colors = [{}, {}];
+    let teamColors = [{}, {}];
 
     // 스탯 모음
     let statSums = [
-      { tackle: 0, Physical: 0, power: 0, dribble: 0 },
-      { tackle: 0, Physical: 0, power: 0, dribble: 0 },
+      { tackle: 0, physical: 0, power: 0, dribble: 0 },
+      { tackle: 0, physical: 0, power: 0, dribble: 0 },
     ];
 
     // 카드 정보 받아오기
-    getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums);
+    getInfos(aTeamCards, bTeamCards, positions, teamColors, statSums);
 
     console.log(aTeamCards, bTeamCards);
 
@@ -165,7 +173,7 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     console.log(rates);
 
     // 진영별 확률 조정
-    applyTeamColors(rates, team_colors);
+    applyTeamColors(rates, teamColors);
 
     console.log(rates);
 
@@ -193,101 +201,62 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
     return res
       .status(201)
       .json({ result: result, a_team_score: aScore, b_team_score: bScore });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 });
 // #endregion
 
-// #region 대전 기록 조회
-router.get('./games/battle-log/:userId', authMidWare, async (req, res) => {
-  const userId = parseInt(req.params.Id, 10);
+//---- 특정 사용자 배틀 로그 조회 API
+router.get('/games/battle-log/:userId', async (req, res, next) => {
+  const { userId } = req.params;
 
   try {
-    const battleLog = await prisma.game.findUnique({
-      where: { team_a_user_id: userId },
+    // 해당 유저가 존재하는지 확인
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: '해당 유저가 존재하지 않습니다.' });
+    }
+
+    // 특정 사용자 배틀 로그 조회
+    const battleLog = await prisma.game.findMany({
+      where: { OR: [{ team_a_user_id: userId }, { team_b_user_id: userId }] },
       select: {
+        team_a_user_id: true,
         team_b_user_id: true,
         team_a_score: true,
         team_b_score: true,
         played_at: true,
       },
     });
+
     if (!battleLog) {
       return res
         .status(404)
-        .json({ message: '해당 닉네임은 대전기록이 없습니다.' });
+        .json({ message: '해당 유저는 대전기록이 없습니다.' });
     }
+
+    // 성공 응답 반환
     return res.status(200).json(battleLog);
   } catch (error) {
-    console.error('배틀로그 조회중 에러발생:', error);
-    return res
-      .status(500)
-      .json({ message: '배틀로그 조회중 오류가 발생했습니다.' });
+    next(error);
   }
 });
-
-// router.get('/users/:userId/cards',  async (req, res) => {
-//   const { userId } = req.params;
-
-//   try {
-//       await stringSchema.validateAsync(req.user.id);
-
-//       //아이디 일치 판정
-//       if (userId !== req.user.id) return res.status(401).json({ message: "다른 유저의 보유 카드입니다." });
-
-//       //카드 아이디 받아오기
-//       const cardIdxs = await prisma.userCard.findMany({
-//           where: {
-//               user_id: userId
-//           },
-//           select: {
-//               card_idx: true,
-//           },
-//       });
-
-//       if (!cardIdxs) return res.status(200).json({ message: "보유 카드가 없습니다." });
-
-//       //객체 -> 배열
-//       const Idxs = cardIdxs.map(item => item.card_idx);
-
-//       //카드 정보 받아오기
-//       const userCards = await prisma.card.findMany({
-//           where: {
-//               idx: {
-//                   in: Idxs
-//               }
-//           },
-//           select: {
-//               name: true,
-//               physical: true,
-//               power: true,
-//               dribble: true,
-//               team_color: true,
-//               grade: true,
-//               type: true
-//           },
-//       });
-
-//       return res.status(200).json(userCards);
-//   } catch (error) {
-//       console.error("보유 카드 검색 중 에러 발생: ", error);
-
-//       next(error);
-//   }
-// });
 
 // #endregion
 
 // #region 팀 정보 추출
-function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
+function getInfos(aTeamCards, bTeamCards, positions, teamColors, statSums) {
   for (let i = 0; i < HEADCOUNT; i++) {
-    //스탯 검사
+    // 스탯 검사
     statSums[0].tackle += aTeamCards[i].tackle;
     statSums[1].tackle += bTeamCards[i].tackle;
 
-    statSums[0].Physical += aTeamCards[i].Physical;
-    statSums[1].Physical += bTeamCards[i].Physical;
+    statSums[0].physical += aTeamCards[i].physical;
+    statSums[1].physical += bTeamCards[i].physical;
 
     statSums[0].power += aTeamCards[i].power;
     statSums[1].power += bTeamCards[i].power;
@@ -295,21 +264,21 @@ function getInfos(aTeamCards, bTeamCards, positions, team_colors, statSums) {
     statSums[0].dribble += aTeamCards[i].dribble;
     statSums[1].dribble += bTeamCards[i].dribble;
 
-    //포지션 검사
+    // 포지션 검사
     if (aTeamCards[i].type === 'ATTACKER') positions[0] += 1;
     else positions[2] += 1;
 
     if (bTeamCards[i].type === 'ATTACKER') positions[1] += 1;
     else positions[3] += 1;
 
-    //진영 검사
+    // 진영 검사
     const aTeamColor = aTeamCards[i].team_color;
-    if (team_colors[0][aTeamColor]) team_colors[0][aTeamColor] += 1;
-    else team_colors[0][aTeamColor] = 1;
+    if (teamColors[0][aTeamColor]) teamColors[0][aTeamColor] += 1;
+    else teamColors[0][aTeamColor] = 1;
 
     const bTeamColor = bTeamCards[i].team_color;
-    if (team_colors[1][bTeamColor]) team_colors[1][bTeamColor] += 1;
-    else team_colors[1][bTeamColor] = 1;
+    if (teamColors[1][bTeamColor]) teamColors[1][bTeamColor] += 1;
+    else teamColors[1][bTeamColor] = 1;
   }
 }
 // #endregion
@@ -322,8 +291,8 @@ function getRate(statSums) {
   statSums[0].tackle = Math.floor(statSums[0].tackle * DEFENSE_WEIGHT[0]);
   statSums[1].tackle = Math.floor(statSums[1].tackle * DEFENSE_WEIGHT[0]);
 
-  statSums[0].Physical = Math.floor(statSums[0].Physical * DEFENSE_WEIGHT[1]);
-  statSums[1].Physical = Math.floor(statSums[1].Physical * DEFENSE_WEIGHT[1]);
+  statSums[0].physical = Math.floor(statSums[0].physical * DEFENSE_WEIGHT[1]);
+  statSums[1].physical = Math.floor(statSums[1].physical * DEFENSE_WEIGHT[1]);
 
   statSums[0].power = Math.floor(statSums[0].power * ATTACK_WEIGHT[0]);
   statSums[1].power = Math.floor(statSums[1].power * ATTACK_WEIGHT[0]);
@@ -332,17 +301,17 @@ function getRate(statSums) {
   statSums[1].dribble = Math.floor(statSums[1].dribble * ATTACK_WEIGHT[1]);
 
   const aTeamDeffenseRatio = Math.floor(
-    (statSums[0].tackle + statSums[0].Physical) / 2
+    (statSums[0].tackle + statSums[0].physical) / 2
   );
   const bTeamDeffenseRatio = Math.floor(
-    (statSums[1].tackle + statSums[1].Physical) / 2
+    (statSums[1].tackle + statSums[1].physical) / 2
   );
 
   const aTeamAttackRatio = Math.floor(
-    (statSums[0].power + statSums[0].Physical) / 2
+    (statSums[0].power + statSums[0].physical) / 2
   );
   const bTeamAttackRatio = Math.floor(
-    (statSums[1].power + statSums[1].Physical) / 2
+    (statSums[1].power + statSums[1].physical) / 2
   );
 
   console.log(statSums);
@@ -367,16 +336,16 @@ function applyPositions(rates, positions) {
 // #endregion
 
 // #region 진영 별 확률 조정
-function applyTeamColors(rates, team_colors) {
-  for (const key in team_colors[0]) {
-    const item = team_colors[0][key];
+function applyTeamColors(rates, teamColors) {
+  for (const key in teamColors[0]) {
+    const item = teamColors[0][key];
 
     rates.aTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
     rates.aTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];
   }
 
-  for (const key in team_colors[1]) {
-    const item = team_colors[1][key];
+  for (const key in teamColors[1]) {
+    const item = teamColors[1][key];
 
     rates.bTeamAttackRatio += TEAM_COLOR_WEIGHT[item];
     rates.bTeamDeffenseRatio += TEAM_COLOR_WEIGHT[item];

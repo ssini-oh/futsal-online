@@ -1,12 +1,13 @@
 import express from 'express';
 import { prisma } from '../utils/prisma/index.js'; // post 에서 만든거 사용함
 import authMiddleware from '../middlewares/auth.middleware.js';
-import { stringSchema } from '../validations/auth.validation.js';
 
 const router = express.Router();
 
-router.get('/users', async (req, res) => {
+//---- 유저 목록 조회 API
+router.get('/users', async (req, res, next) => {
   try {
+    // 유저 목록 조회
     const allUsers = await prisma.user.findMany({
       select: {
         username: true,
@@ -15,28 +16,20 @@ router.get('/users', async (req, res) => {
       },
     });
 
+    // 성공 응답 반환
     return res.status(200).json(allUsers);
   } catch (error) {
     console.error('아이탬 목록 조회 중 에러 발생: ', error);
-    if (!allUsers) {
-      return res
-        .status(404)
-        .json({ massage: '유저 목록 조회중 오래구 발생하였습니다.' });
-    }
+    next(error);
   }
 });
 
-router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
-  const { userId } = req.params;
+//---- 유저 카드 목록 조회 API
+router.get('/users/cards', authMiddleware, async (req, res) => {
+  const userId = req.user.id;
 
   try {
-    await stringSchema.validateAsync(req.user.id);
-
-    //아이디 일치 판정
-    if (userId !== req.user.id)
-      return res.status(401).json({ message: '다른 유저의 보유 카드입니다.' });
-
-    //카드 아이디 받아오기
+    // 카드 아이디 받아오기
     const cardIdxs = await prisma.userCard.findMany({
       where: {
         user_id: userId,
@@ -49,10 +42,10 @@ router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
     if (!cardIdxs)
       return res.status(200).json({ message: '보유 카드가 없습니다.' });
 
-    //객체 -> 배열
+    // 객체 -> 배열
     const Idxs = cardIdxs.map((item) => item.card_idx);
 
-    //카드 정보 받아오기
+    // 카드 정보 받아오기
     const userCards = await prisma.card.findMany({
       where: {
         idx: {
@@ -70,10 +63,10 @@ router.get('/users/:userId/cards', authMiddleware, async (req, res) => {
       },
     });
 
+    // 성공 응답 반환
     return res.status(200).json(userCards);
   } catch (error) {
     console.error('보유 카드 검색 중 에러 발생: ', error);
-
     next(error);
   }
 });
