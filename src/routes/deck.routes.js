@@ -6,7 +6,7 @@ import authMiddleware from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-//------ 덱 생성 및 수정 API (JWT 인증 미들웨어 추가 필요)
+//------ 덱 생성 및 수정 API
 router.post('/users/decks', authMiddleware, async (req, res, next) => {
   const { cardId } = req.body;
   const userId = req.user.id;
@@ -87,13 +87,11 @@ router.post('/users/decks', authMiddleware, async (req, res, next) => {
       deck: updatedDeck,
     });
   } catch (error) {
-    console.log('111111');
-    console.error(error);
     next(error);
   }
 });
 
-//---- 덱에서 특정 카드 삭제 API (JWT 인증 미들웨어 추가 필요)
+//---- 덱에서 특정 카드 삭제 API
 router.delete(
   '/users/decks/:cardId',
   authMiddleware,
@@ -157,7 +155,6 @@ router.delete(
         .status(200)
         .json({ message: '카드가 덱에서 삭제되었습니다.', deck: updatedDeck });
     } catch (error) {
-      console.error(error);
       next(error);
     }
   }

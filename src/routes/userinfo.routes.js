@@ -3,11 +3,12 @@ import { prisma } from '../utils/prisma/index.js';
 
 const router = express.Router();
 
-router.get('/user/:userId', async (req, res, next) => {
+//---- 유저 정보 상세 조회 API
+router.get('/users/:userId', async (req, res, next) => {
   try {
     const { userId } = req.params;
-    console.log('1111111111');
-    console.log(req.params);
+
+    // 유저 아이디 조회
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -24,10 +25,11 @@ router.get('/user/:userId', async (req, res, next) => {
       created_at: user.created_at,
     };
 
+    // 성공 응답 반환
     return res.status(200).json({ data: userinfo });
   } catch (error) {
     next(error);
-    //서버 오류 발생 시
   }
 });
+
 export default router;
