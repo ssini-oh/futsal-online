@@ -43,9 +43,7 @@ model User {
   created_at DateTime  @default(now())
 
   userCards        UserCard[]
-  // decks            Deck[]
   deck       Deck?     @relation // 1:1 관계
-
 
   gamesA           Game[]     @relation("TeamA")
   gamesB           Game[]     @relation("TeamB")
