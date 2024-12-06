@@ -4,7 +4,7 @@ import authMiddleware from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-//---- 캐시 충전 API (JWT 인증 미들웨어 추가 필요)
+//---- 캐시 충전 API
 router.post('/cash', authMiddleware, async (req, res, next) => {
   const { cash } = req.body;
   const userId = req.user.id;
