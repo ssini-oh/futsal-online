@@ -174,7 +174,6 @@ router.post('/game/:user_id', authMidWare, async (req, res, next) => {
 
     console.log(rates);
 
-
     /** 경기 시작 */
     const { aScore, bScore } = game(rates);
 
@@ -211,23 +210,22 @@ router.get('./games/battle-log/:userId', authMidWare, async (req, res) => {
         team_b_user_id: true,
         team_a_score: true,
         team_b_score: true,
-        played_at: true
-      }
-    })
+        played_at: true,
+      },
+    });
     if (!battleLog) {
       return res
         .status(404)
-        .json({ message: "해당 닉네임은 대전기록이 없습니다." })
+        .json({ message: '해당 닉네임은 대전기록이 없습니다.' });
     }
     return res.status(200).json(battleLog);
   } catch (error) {
-    console.error("배틀로그 조회중 에러발생:", error);
+    console.error('배틀로그 조회중 에러발생:', error);
     return res
       .status(500)
-      .json({ message: "배틀로그 조회중 오류가 발생했습니다." });
+      .json({ message: '배틀로그 조회중 오류가 발생했습니다.' });
   }
-})
-
+});
 
 // router.get('/users/:userId/cards',  async (req, res) => {
 //   const { userId } = req.params;
@@ -278,8 +276,6 @@ router.get('./games/battle-log/:userId', authMidWare, async (req, res) => {
 //       next(error);
 //   }
 // });
-
-
 
 // #endregion
 
@@ -431,10 +427,5 @@ function getRandomNum(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 // #endregion
-
-
-
-
-
 
 export default router;

@@ -28,7 +28,7 @@ app.use('/api', [
   gameRoutes,
   userRoutes,
   userinfoRoutes,
-  deckRoutes
+  deckRoutes,
 ]);
 
 // 에러 처리 미들웨어
