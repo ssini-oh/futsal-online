@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../utils/prisma/index.js';
 import authMidWare from '../middlewares/auth.middleware.js';
-import {  stringSchema  } from '../validations/auth.validation.js';
+import { stringSchema } from '../validations/auth.validation.js';
 
 const router = Router();
 
@@ -336,12 +336,12 @@ function game(rates) {
 function calibrateRates(rates) {
   for (const key in rates) {
     if (rates[key] > MAX_RATE) rates[key] = MAX_RATE;
-  for (const key in rates) {
-    if (rates[key] > MAX_RATE) rates[key] = MAX_RATE;
-    else if (rates[key] < MIN_RATE) rates[key] = MIN_RATE;
+    for (const key in rates) {
+      if (rates[key] > MAX_RATE) rates[key] = MAX_RATE;
+      else if (rates[key] < MIN_RATE) rates[key] = MIN_RATE;
+    }
   }
 }
-
 // #endregion
 
 // #region 랜덤 숫자 뽑기
