@@ -43,7 +43,8 @@ model User {
   created_at DateTime  @default(now())
 
   userCards        UserCard[]
-  decks            Deck[]
+  deck       Deck?     @relation // 1:1 관계
+
   gamesA           Game[]     @relation("TeamA")
   gamesB           Game[]     @relation("TeamB")
   cashTransactions CashTransaction[]
@@ -52,13 +53,10 @@ model User {
 model Card {
   idx        Int       @id @default(autoincrement())
   name       String    @db.VarChar(255)
-
-  tackle      Int // 태클
-  physical    Int // 피지컬
-
-  power       Int // 파워
-  dribble     Int // 드리블
-
+  tackle     Int       // 태클
+  physical   Int       // 피지컬
+  power      Int       // 파워
+  dribble    Int       // 드리블
   team_color TeamColorType
   grade      GradeType
   type       CardType
@@ -67,31 +65,32 @@ model Card {
 }
 
 model Deck {
-  idx        Int        @id @default(autoincrement())
-  user_id    String
-  card_1_idx Int        @unique
-  card_2_idx Int        @unique
-  card_3_idx Int        @unique
-  created_at DateTime   @default(now())
+  idx        Int       @id @default(autoincrement())
+  user_id    String    @unique // 계정 1개당 1개의 덱
+  
+  card_1_idx Int?      // 첫 번째 카드 (nullable)
+  card_2_idx Int?      // 두 번째 카드 (nullable)
+  card_3_idx Int?      // 세 번째 카드 (nullable)
+  created_at DateTime  @default(now())
 
-  user   User     @relation(fields: [user_id], references: [id])
-  card1  UserCard @relation("DeckCard1", fields: [card_1_idx], references: [idx])
-  card2  UserCard @relation("DeckCard2", fields: [card_2_idx], references: [idx])
-  card3  UserCard @relation("DeckCard3", fields: [card_3_idx], references: [idx])
+  user   User     @relation(fields: [user_id], references: [id]) // 1:1 관계
+  card1  UserCard? @relation("DeckCard1", fields: [card_1_idx], references: [idx]) // 첫 번째 카드 관계
+  card2  UserCard? @relation("DeckCard2", fields: [card_2_idx], references: [idx]) // 두 번째 카드 관계
+  card3  UserCard? @relation("DeckCard3", fields: [card_3_idx], references: [idx]) // 세 번째 카드 관계
 }
 
 model UserCard {
-  idx        Int       @id @default(autoincrement())
-  user_id    String
-  card_idx   Int
-  acquired_at DateTime @default(now())
+  idx         Int       @id @default(autoincrement())
+  user_id     String
+  card_idx    Int
+  acquired_at DateTime  @default(now())
 
   user User @relation(fields: [user_id], references: [id])
   card Card @relation(fields: [card_idx], references: [idx])
 
-  decks1 Deck? @relation("DeckCard1")
-  decks2 Deck? @relation("DeckCard2")
-  decks3 Deck? @relation("DeckCard3")
+  decks1 Deck[] @relation("DeckCard1")
+  decks2 Deck[] @relation("DeckCard2")
+  decks3 Deck[] @relation("DeckCard3")
 }
 
 model Game {
